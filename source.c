@@ -42,6 +42,9 @@ void run_server(int port, int interval) {
         exit(EXIT_FAILURE);
     }
 
+    // warm-up cycles before real measuring
+    warm_up('s', ctrl_socket, data_socket);
+
     // running measures...
     throughput('s', ctrl_socket, data_socket, interval);
 
@@ -66,6 +69,9 @@ void run_client(char *server_ip,int port, int interval) {
         perror("Failed to update server with time interval duration, exit program\n");
         exit(EXIT_FAILURE);
     }
+
+    // warm-up cycles before real measuring
+    warm_up('c', client_ctrl, client_data);
 
     // running measures...
     throughput('c', client_ctrl, client_data, interval);
@@ -314,4 +320,8 @@ void pretty_print(ssize_t bytes, ssize_t window,int interval) {
     else if(bps >= 1e9) {
         printf("%ld\t%.2lf\tGbits/sec\n",window,bps/1e9);
     }
+}
+
+void warm_up(char mode, int control_socket, int data_socket) {
+    printf("this is warm up\n");
 }
