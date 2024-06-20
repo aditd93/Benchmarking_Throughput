@@ -158,7 +158,7 @@ void throughput(char mode, int control_socket, int data_socket, int interval) {
                                 break;
                                 
                             case END_ROUND:
-                                // pretty_print(bytes_total,window,interval); // debug check throughput synced between client and server
+                                // pretty_print(bytes_total,window,interval); // DEBUG check throughput synced between client and server
                                 bytes_total = 0;
                                 window *= 2;
                                 break;
