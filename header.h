@@ -42,5 +42,6 @@ int configure_client(int port, char *server_ip);
 void throughput(char mode, int control_socket, int data_socket, int interval);
 int syncing(char mode, int control_socket, int stage);
 void pretty_print(ssize_t bytes,ssize_t window,int interval);
+void warm_up(char mode, int control_socket, int data_socket);
 
 #endif /* SERVER_HEADER_H_ */

@@ -42,6 +42,9 @@ void run_server(int port, int interval) {
         exit(EXIT_FAILURE);
     }
 
+    // warm-up cycles before real measuring
+    warm_up('s', ctrl_socket, data_socket);
+
     // running measures...
     throughput('s', ctrl_socket, data_socket, interval);
 
@@ -66,6 +69,9 @@ void run_client(char *server_ip,int port, int interval) {
         perror("Failed to update server with time interval duration, exit program\n");
         exit(EXIT_FAILURE);
     }
+
+    // warm-up cycles before real measuring
+    warm_up('c', client_ctrl, client_data);
 
     // running measures...
     throughput('c', client_ctrl, client_data, interval);
@@ -199,7 +205,7 @@ void throughput(char mode, int control_socket, int data_socket, int interval) {
                 free(data_buffer);
             }
             if(syncing('c',control_socket,DONE) == DONE) {
-                printf("Done\n");
+                // printf("Done\n"); DEBUG
                 break;
             }
             break;
@@ -313,5 +319,72 @@ void pretty_print(ssize_t bytes, ssize_t window,int interval) {
     }
     else if(bps >= 1e9) {
         printf("%ld\t%.2lf\tGbits/sec\n",window,bps/1e9);
+    }
+}
+
+void warm_up(char mode, int control_socket, int data_socket) {
+    
+    switch(mode) {
+        case 's':
+                ssize_t bytes, bytes_total = 0;
+                fd_set readfds; int max_sd, action; int done = 1;
+                char data_buffer[WARM_UP];
+                while(done) {
+                    FD_ZERO(&readfds);
+                    FD_SET(control_socket,&readfds); FD_SET(data_socket,&readfds);
+                    max_sd = control_socket > data_socket ? control_socket : data_socket;
+                    action = select(max_sd + 1, &readfds, NULL, NULL, NULL);
+                    if((action < 0) && (errno != EINTR)) {
+                        perror("select error\n");
+                        break;
+                    }
+                    if(FD_ISSET(control_socket, &readfds)) {
+                        int state = syncing('s',control_socket,0);
+                        switch(state) {
+                            case START:
+                                break;
+                                
+                            case END_ROUND:
+                                //pretty_print(bytes_total,WARM_UP,10); // DEBUG check throughput synced between client and server
+                                bytes_total = 0;
+                                break;
+                                
+                            case DONE:
+                                done = 0;
+                                break;
+                        }
+                    }
+                    if(FD_ISSET(data_socket, &readfds)) {
+                        bytes = recv(data_socket,&data_buffer,WARM_UP,0);
+                        if(bytes < 0) {
+                            perror("recv error\n");
+                            break;
+                        }
+                        bytes_total += bytes;
+                    }
+                }
+            break;
+
+        case 'c':
+            char data2send[WARM_UP] = {'$'};
+            for(int i = 1; i <= 10; i++) {
+                ssize_t bytes_total = 0; 
+                if(syncing('c',control_socket,START) == START) {
+                    time_t t = time(NULL);
+                    while(time(NULL) - t < i) {
+                    ssize_t bytes = send(data_socket,&data2send,WARM_UP,0);
+                    bytes_total += bytes;
+                    }
+                    //pretty_print(bytes_total,WARM_UP,i);
+                    if(syncing('c',control_socket,END_ROUND) != END_ROUND) { 
+                        break; 
+                    }
+                }
+            }
+            if(syncing('c',control_socket,DONE) == DONE) {
+                //printf("Done\n");
+                break;
+            }
+            break;
     }
 }
