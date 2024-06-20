@@ -1,4 +1,4 @@
-iperf*
+*iperf_adi
 *.o
 *.txt
 *.pcap
