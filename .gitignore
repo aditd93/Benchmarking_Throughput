@@ -1,0 +1,4 @@
+*iperf
+*.o
+*.txt
+*.pcap
